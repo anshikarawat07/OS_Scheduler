@@ -1,17 +1,17 @@
+# app_controller.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from typing import List, Dict, Tuple, Any
 
-# scheduling_logic must exist in same folder
 import scheduling_logic as sl
 from gui_pages import DashboardPage, TaskManagerPage, SchedulerPage, ComparePage, DeadlockPage, PowerPage
 
 
 class SmartSchedulerApp(tb.Window):
     def __init__(self):
-        super().__init__(themename="flatly")  # Default theme
+        super().__init__(themename="flatly")  # default theme
         self.title('Smart CPU Scheduler & Manager')
         self.geometry('1200x760')
 
@@ -19,31 +19,32 @@ class SmartSchedulerApp(tb.Window):
         self.next_pid = 1
         self.current_timeline: List[Tuple[int, int, int]] = []
 
-        self.rowconfigure(0, weight=0)   # nav
-        self.rowconfigure(1, weight=1)   # pages area
+        # grid setup
+        self.rowconfigure(0, weight=0)
+        self.rowconfigure(1, weight=1)
         self.columnconfigure(0, weight=1)
 
-        # Navigation bar
+        # nav bar setup
         self._create_nav()
 
+        # page container
         self.pages = {}
         for P in (DashboardPage, TaskManagerPage, SchedulerPage, ComparePage, DeadlockPage, PowerPage):
             frame = P(parent=self, controller=self)
             self.pages[P.__name__] = frame
             frame.grid(row=1, column=0, sticky='nsew')
-            frame.grid_remove()  # hide for now
+            frame.grid_remove()
 
-        # Show default page
         self.show_page('DashboardPage')
 
+    # create navigation bar
     def _create_nav(self):
         nav = ttk.Frame(self)
         nav.grid(row=0, column=0, sticky='ew', padx=4, pady=(6, 4))
 
-        # keep nav visually separated
         nav.columnconfigure(0, weight=1)
         btn_frame = ttk.Frame(nav)
-        btn_frame.grid(row=0, column=0)  
+        btn_frame.grid(row=0, column=0)
 
         btns = [
             ('🏠 Dashboard', 'DashboardPage'),
@@ -54,6 +55,7 @@ class SmartSchedulerApp(tb.Window):
             ('⚡ Power', 'PowerPage')
         ]
 
+        # nav buttons
         for txt, page in btns:
             b = ttk.Button(
                 btn_frame,
@@ -63,13 +65,14 @@ class SmartSchedulerApp(tb.Window):
             )
             b.pack(side='left', padx=8)
 
+    # show selected page
     def show_page(self, name: str):
-        for k, p in self.pages.items():
+        for p in self.pages.values():
             p.grid_remove()
         page = self.pages.get(name)
         if page is None:
             return
-        page.grid()   
+        page.grid()
         page.tkraise()
         if hasattr(page, 'on_show'):
             try:
@@ -77,6 +80,7 @@ class SmartSchedulerApp(tb.Window):
             except Exception:
                 pass
 
+    # add new task
     def add_task(self, name, arrival, burst, priority, holding, waiting):
         try:
             arrival_i = int(arrival)
@@ -103,14 +107,15 @@ class SmartSchedulerApp(tb.Window):
         self.tasks.append(t)
         self.next_pid += 1
 
+        # update table
         if 'TaskManagerPage' in self.pages:
             try:
                 self.pages['TaskManagerPage'].update_table(self.tasks)
             except Exception:
                 pass
 
+    # clear all tasks
     def clear_tasks(self):
-        """Clear all tasks"""
         self.tasks = []
         self.next_pid = 1
         if 'TaskManagerPage' in self.pages:
@@ -118,20 +123,28 @@ class SmartSchedulerApp(tb.Window):
                 self.pages['TaskManagerPage'].update_table([])
             except Exception:
                 pass
+
+    # remove selected task
     def clear_selected_task(self, pid: int):
-        """Remove a single task from the internal task list by PID"""
         self.tasks = [t for t in self.tasks if t['pid'] != pid]
         self.next_pid = len(self.tasks) + 1
         if 'TaskManagerPage' in self.pages:
             self.pages['TaskManagerPage'].update_table(self.tasks)
 
-
+    # run selected algorithm
     def run_scheduler(self, algo: str, quantum: int = 2):
-        """Run selected scheduling algorithm"""
         tasks_snapshot = [dict(t) for t in self.tasks]
-        if not tasks_snapshot:
-            return [], {'avg_wait': 0, 'avg_tat': 0, 'cpu_util': 0, 'throughput': 0, 'total_exec': 0}
 
+        if not tasks_snapshot:
+            return [], {
+                'avg_wait': 0,
+                'avg_tat': 0,
+                'cpu_util': 0,
+                'throughput': 0,
+                'total_exec': 0
+            }
+
+        # algorithm selection
         if algo == 'FCFS':
             tl = sl.sched_fcfs(tasks_snapshot)
         elif algo == 'SJF (Non-preemptive)':
@@ -149,15 +162,17 @@ class SmartSchedulerApp(tb.Window):
         else:
             tl = sl.sched_fcfs(tasks_snapshot)
 
+        # compute metrics
         metrics = sl.compute_metrics(tasks_snapshot, tl)
 
-       
+        # update actual task dicts
         for snap in tasks_snapshot:
             for t in self.tasks:
                 if t['pid'] == snap['pid']:
-                    t.update({k: v for k, v in snap.items() if k in ('start', 'completion', 'waiting_time', 'turnaround')})
+                    t.update({
+                        k: v for k, v in snap.items()
+                        if k in ('start', 'completion', 'waiting_time', 'turnaround')
+                    })
 
         self.current_timeline = tl
         return tl, metrics
-
-
