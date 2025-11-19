@@ -1,13 +1,3 @@
-# gui_pages.py
-"""
-Polished GUI pages for Smart CPU Scheduler & Manager
-Requires:
-  - ttkbootstrap
-  - matplotlib
-  - scheduling_logic.py (your scheduling and deadlock helpers)
-Keep your controller code (add_task, clear_tasks, run_scheduler, etc.) as before.
-"""
-
 import math
 import csv
 import io
