@@ -1,4 +1,3 @@
-# app_controller.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import ttkbootstrap as tb
